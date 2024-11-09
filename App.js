@@ -1,20 +1,30 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Login from './src/components/Login';
+import Home from './src/components/Home';
+import UserManagement from './src/components/UserManagement';
+import ProductManagement from './src/components/ProductManagement';
+import CategoryManagement from './src/components/CategoryManagement';
+import FacilityManagement from './src/components/FacilityManagement';
+import PromotionManagement from './src/components/PromotionManagement';
+import OrderManagement from './src/components/OrderManagement';
 
-export default function App() {
+function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/users" element={<UserManagement />} />
+          <Route path="/products" element={<ProductManagement />} />
+          <Route path="/categories" element={<CategoryManagement />} />
+          <Route path="/facilities" element={<FacilityManagement />} />
+          <Route path="/promotions" element={<PromotionManagement />} />
+          <Route path="/orders" element={<OrderManagement />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default App;

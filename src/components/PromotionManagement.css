@@ -1,0 +1,226 @@
+/* Kế thừa styles từ UserManagement.css */
+
+.promotions-table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 20px;
+  height: calc(100% - 100px);
+  overflow: auto;
+}
+
+.promotions-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.promotions-table th,
+.promotions-table td {
+  padding: 12px;
+  text-align: left;
+}
+
+.promotions-table th {
+  background-color: #f8f9fa;
+  color: #333;
+  font-weight: 600;
+}
+
+.promotions-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.add-button {
+  background-color: #4CAF50;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-button:hover {
+  background-color: #45a049;
+}
+
+/* Style cho form */
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+}
+
+.page-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-title h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.help-text {
+  color: #666;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Định dạng số tiền */
+.promotions-table td {
+  white-space: nowrap;
+}
+
+.action-buttons {
+  white-space: nowrap;
+  min-width: 160px;
+}
+
+.edit-button, .delete-button {
+  margin: 0 4px;
+  min-width: 60px;
+}
+
+.edit-button {
+  background-color: #ffc107;
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 60px;
+}
+
+.edit-button:hover {
+  background-color: #ffb300;
+}
+
+.delete-button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 60px;
+}
+
+.delete-button:hover {
+  background-color: #c82333;
+}
+
+/* Đảm bảo các nút luôn hiển thị trên cùng một hàng */
+.promotions-table td {
+  vertical-align: middle;
+}
+
+/* Thêm padding cho cột chứa buttons */
+.promotions-table td:last-child {
+  padding: 8px 16px;
+}
+
+/* Đảm bảo các nút có kích thước cố định */
+.promotions-table td:nth-last-child(-n+2) {
+  width: 80px;
+  text-align: center;
+}
+
+.admin-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.admin-content {
+  display: flex;
+  flex: 1;
+}
+
+.admin-sidebar {
+  width: 250px;
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-right: 1px solid #dee2e6;
+}
+
+.menu-section h3 {
+  color: #6c757d;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  padding-left: 0.5rem;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  color: #495057;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 0.25rem;
+}
+
+.menu-item:hover {
+  background-color: #e9ecef;
+}
+
+.menu-item.active {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.menu-item i {
+  margin-right: 0.75rem;
+  width: 20px;
+  text-align: center;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  background-color: #f8f9fa;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-name {
+  color: #495057;
+}
+
+.logout-button {
+  padding: 0.5rem 1rem;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background-color: #c82333;
+}
