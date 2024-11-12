@@ -4,6 +4,7 @@ import { auth, db, storage } from '../../firebase.config';
 import { collection, getDocs, doc, deleteDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import './ProductManagement.css';
+import Sidebar from './Sidebar';
 
 function ProductManagement() {
   const navigate = useNavigate();
@@ -73,8 +74,21 @@ function ProductManagement() {
   const handleDeleteProduct = async (productId) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) {
       try {
-        await deleteDoc(doc(db, "Services", productId));
-        setProducts(products.filter(product => product.id !== productId));
+        // 1. Xóa tất cả documents trong subcollection Option
+        const optionsRef = collection(db, `Services/${productId}/Option`);
+        const optionsSnapshot = await getDocs(optionsRef);
+        
+        const deletePromises = optionsSnapshot.docs.map(doc => 
+          deleteDoc(doc.ref)
+        );
+        await Promise.all(deletePromises);
+
+        // 2. Xóa document trong collection Services
+        const serviceDocRef = doc(db, "Services", productId);
+        await deleteDoc(serviceDocRef);
+
+        // 3. Cập nhật state
+        setProducts(prevProducts => prevProducts.filter(product => product.id !== productId));
         alert('Xóa sản phẩm thành công!');
       } catch (error) {
         console.error("Error deleting product:", error);
@@ -290,46 +304,7 @@ function ProductManagement() {
       </header>
 
       <div className="admin-content">
-        <nav className="admin-sidebar">
-        <div className="menu-section">
-            <h3>MENU CHÍNH</h3>
-          <ul>
-            <li className="menu-item" onClick={() => navigate('/')}>
-              <i className="fas fa-home"></i>
-              <span>Trang chủ</span>
-            </li>
-            <li className="menu-item" onClick={() => navigate('/users')}>
-              <i className="fas fa-users"></i>
-              <span>Quản lý người dùng</span>
-            </li>
-            <li className="menu-item" onClick={() => navigate('/orders')}>
-              <i className="fas fa-shopping-cart"></i>
-              <span>Quản lý đơn hàng</span>
-            </li>
-            <li className="menu-item" onClick={() => navigate('/categories')}>
-              <i className="fas fa-tags"></i>
-              <span>Quản lý thể loại</span>
-            </li>
-            <li className="menu-item active" onClick={() => navigate('/products')}>
-              <i className="fas fa-box"></i>
-              <span>Quản lý sản phẩm</span>
-            </li>
-            <li className="menu-item" onClick={() => navigate('/facilities')}>
-              <i className="fas fa-building"></i>
-              <span>Quản lý cơ sở</span>
-            </li>
-            <li className="menu-item" onClick={() => navigate('/promotions')}>
-              <i className="fas fa-percentage"></i>
-              <span>Quản lý khuyến mãi</span>
-            </li>
-            <li className="menu-item" onClick={() => navigate('/settings')}>
-              <i className="fas fa-cog"></i>
-              <span>Cài đặt</span>
-            </li>
-          </ul>
-          </div>
-        </nav>
-
+        <Sidebar />
         <main className="main-content">
           <div className="content-header">
             <h2>Quản lý sản phẩm</h2>

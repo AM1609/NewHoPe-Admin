@@ -10,15 +10,19 @@ function OrderManagement() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [filteredOrders, setFilteredOrders] = useState([]);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const ordersSnapshot = await getDocs(collection(db, "Appointments"));
       const ordersData = ordersSnapshot.docs.map(doc => ({
-        transactionId: doc.id,
+        id: doc.id,
         ...doc.data()
       }));
+      console.log('Fetched orders:', ordersData);
       setOrders(ordersData);
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -38,34 +42,74 @@ function OrderManagement() {
     return () => unsubscribe();
   }, [navigate]);
 
+  useEffect(() => {
+    let result = [...orders];
+    
+    // Filter by search term
+    if (searchTerm) {
+      result = result.filter(order => 
+        order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.phone?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Filter by status
+    if (statusFilter !== 'all') {
+      result = result.filter(order => 
+        order.state?.toLowerCase() === statusFilter.toLowerCase()
+      );
+    }
+    
+    setFilteredOrders(result);
+  }, [orders, searchTerm, statusFilter]);
+
   const handleViewDetails = (order) => {
+    console.log('Selected order:', order);
+    console.log('Document ID:', order.id);
+    
     setSelectedOrder(order);
     setIsModalOpen(true);
   };
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
-      await updateDoc(doc(db, "Appointments", orderId), {
-        state: newStatus
+      if (!orderId) {
+        throw new Error('Order ID is required');
+      }
+
+      console.log('Updating order with ID:', orderId);
+      console.log('New status:', newStatus);
+
+      const orderRef = doc(db, "Appointments", orderId);
+
+      await updateDoc(orderRef, {
+        state: newStatus.toLowerCase()
       });
       
-      setOrders(orders.map(order => 
-        order.transactionId === orderId 
-          ? { ...order, state: newStatus }
-          : order
-      ));
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { ...order, state: newStatus.toLowerCase() }
+            : order
+        )
+      );
+      
+      setSelectedOrder(prev => ({
+        ...prev,
+        state: newStatus.toLowerCase()
+      }));
       
       alert('Cập nhật trạng thái thành công!');
     } catch (error) {
       console.error("Error updating order status:", error);
-      alert('Có lỗi xảy ra khi cập nhật trạng thái!');
+      alert(`Có lỗi xảy ra khi cập nhật trạng thái: ${error.message}`);
     }
   };
 
   const formatDate = (timestamp) => {
     if (!timestamp) return '';
     
-    // Kiểm tra nếu timestamp là object từ Firestore
     if (timestamp.seconds) {
       return new Date(timestamp.seconds * 1000).toLocaleString('vi-VN', {
         year: 'numeric',
@@ -77,7 +121,6 @@ function OrderManagement() {
       });
     }
     
-    // Nếu timestamp là string hoặc number
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) return '';
     
@@ -173,6 +216,39 @@ function OrderManagement() {
             <h1>Quản lý đơn hàng</h1>
           </div>
 
+          <div className="filters-container">
+            <div className="search-box">
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo mã đơn, tên khách hàng, số điện thoại..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <i className="fas fa-search search-icon"></i>
+              {searchTerm && (
+                <i 
+                  className="fas fa-times clear-icon"
+                  onClick={() => setSearchTerm('')}
+                ></i>
+              )}
+            </div>
+            
+            <div className="status-filter">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">🔄 Tất cả trạng thái</option>
+                <option value="new">🆕 Mới</option>
+                <option value="pending">⏳ Đang chờ</option>
+                <option value="preparing">👨‍🍳 Đang chuẩn bị</option>
+                <option value="delivering">🚚 Đang giao</option>
+                <option value="delivered">✅ Đã giao</option>
+                <option value="cancelled">❌ Đã hủy</option>
+              </select>
+            </div>
+          </div>
+
           <div className="orders-table-container">
             <table className="orders-table">
               <thead>
@@ -186,9 +262,9 @@ function OrderManagement() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order.transactionId}>
-                    <td>{order.transactionId}</td>
+                {filteredOrders.map((order) => (
+                  <tr key={order.id}>
+                    <td>{order.id}</td>
                     <td>{order.fullName}</td>
                     <td>{formatDate(order.datetime)}</td>
                     <td>{order.totalPrice?.toLocaleString()} VNĐ</td>
@@ -246,12 +322,15 @@ function OrderManagement() {
                 <span className="detail-label">Trạng thái:</span>
                 <span className="detail-value">
                   <select
-                    value={selectedOrder.state}
-                    onChange={(e) => handleUpdateStatus(selectedOrder.transactionId, e.target.value)}
+                    value={selectedOrder.state?.toLowerCase()}
+                    onChange={(e) => handleUpdateStatus(selectedOrder.id, e.target.value)}
+
                   >
                     <option value="new">Mới</option>
-                    <option value="pending">Chưa thanh toán</option>
-                    <option value="delivered">Đã hoàn thành</option>
+                    <option value="pending">Đang chờ</option>
+                    <option value="preparing">Đang chuẩn bị</option>
+                    <option value="delivering">Đang giao</option>
+                    <option value="delivered">Đã giao</option>
                     <option value="cancelled">Đã hủy</option>
                   </select>
                 </span>

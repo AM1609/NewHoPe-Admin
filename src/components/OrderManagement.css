@@ -123,3 +123,123 @@
   letter-spacing: 0.5px;
   word-break: break-all;
 }
+
+.filters-container {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.search-box {
+  flex: 1;
+  position: relative;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 40px 12px 45px;
+  border: 2px solid #eef0f7;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: #f8f9fc;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(74,144,226,0.1);
+}
+
+.search-box .search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8e94a7;
+  font-size: 16px;
+}
+
+.search-box .clear-icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8e94a7;
+  cursor: pointer;
+  padding: 5px;
+  transition: all 0.2s ease;
+}
+
+.search-box .clear-icon:hover {
+  color: #4a4a4a;
+  background: #f0f0f0;
+  border-radius: 50%;
+}
+
+.status-filter select {
+  padding: 12px 35px 12px 15px;
+  border: 2px solid #eef0f7;
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 220px;
+  background: #f8f9fc;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238e94a7' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 15px) center;
+  transition: all 0.3s ease;
+}
+
+.status-filter select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(74,144,226,0.1);
+}
+
+.status-filter select option {
+  padding: 10px;
+  font-size: 14px;
+}
+
+/* Hover states */
+.search-box input:hover,
+.status-filter select:hover {
+  border-color: #4a90e2;
+  background: white;
+}
+
+/* Placeholder style */
+.search-box input::placeholder {
+  color: #8e94a7;
+  font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .filters-container {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .status-filter select {
+    width: 100%;
+  }
+}
+
+/* Animation for icons */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.search-box .clear-icon {
+  animation: fadeIn 0.2s ease;
+}

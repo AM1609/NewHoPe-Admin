@@ -7,6 +7,7 @@ import CategoryManagement from './src/components/CategoryManagement';
 import FacilityManagement from './src/components/FacilityManagement';
 import PromotionManagement from './src/components/PromotionManagement';
 import OrderManagement from './src/components/OrderManagement';
+import SettingsManagement from './src/components/SettingsManagement';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/facilities" element={<FacilityManagement />} />
           <Route path="/promotions" element={<PromotionManagement />} />
           <Route path="/orders" element={<OrderManagement />} />
+          <Route path="/settings" element={<SettingsManagement />} />
         </Routes>
       </div>
     </Router>

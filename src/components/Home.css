@@ -136,20 +136,27 @@
   transition: transform 0.2s, box-shadow 0.2s;
   border: 1px solid rgba(0,0,0,0.05);
   min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
 }
 
 .stat-card h3 {
   margin: 0;
   color: #666;
   font-size: 1rem;
-  margin-bottom: 10px;
+  width: 100%;
+  text-align: center;
 }
 
 .stat-number {
-  margin: 0;
-  font-size: 2rem;
+  font-size: 2.5rem;
   font-weight: bold;
-  color: #2196f3;
+  margin: 15px 0;
+  width: 100%;
+  text-align: center;
 }
 
 @media (max-width: 1200px) {
@@ -178,17 +185,21 @@
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.dashboard-tables {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+.chart-container {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   margin: 20px 0;
+  height: 400px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.recent-orders,
-.recent-users {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-} 
+/* Responsive */
+@media (max-width: 768px) {
+  .chart-container {
+    height: 300px;
+  }
+}

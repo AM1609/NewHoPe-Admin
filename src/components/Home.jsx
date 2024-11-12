@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../../firebase.config';
 import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
-import { Line, Bar } from 'react-chartjs-2';
+import { Line, Bar, Pie } from 'react-chartjs-2';
 import './Home.css';
 import {
   Chart as ChartJS,
@@ -13,10 +13,11 @@ import {
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  ArcElement
 } from 'chart.js';
 
-// Đăng ký các components cần thiết cho Chart.js
+// Đăng ký tất cả các thành phần cần thiết
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -25,7 +26,8 @@ ChartJS.register(
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  ArcElement
 );
 
 function Home() {
@@ -47,16 +49,75 @@ function Home() {
 
   const [topServicesData, setTopServicesData] = useState({
     labels: [],
-    datasets: []
+    datasets: [{
+      data: [],
+      backgroundColor: [
+        'rgba(255, 99, 132, 0.5)',
+        'rgba(54, 162, 235, 0.5)',
+        'rgba(255, 206, 86, 0.5)',
+        'rgba(75, 192, 192, 0.5)',
+        'rgba(153, 102, 255, 0.5)'
+      ],
+      borderColor: [
+        'rgba(255, 99, 132, 1)',
+        'rgba(54, 162, 235, 1)',
+        'rgba(255, 206, 86, 1)',
+        'rgba(75, 192, 192, 1)',
+        'rgba(153, 102, 255, 1)'
+      ],
+      borderWidth: 1
+    }]
   });
 
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
+
+  const [revenueStats, setRevenueStats] = useState({
+    lastMonth: 0,
+    thisMonth: 0,
+    percentChange: 0
+  });
+
+  const [categoryStats, setCategoryStats] = useState({
+    labels: [],
+    datasets: [{
+      data: [],
+      backgroundColor: []
+    }]
+  });
+
+  const [monthlyRevenueData, setMonthlyRevenueData] = useState({
+    labels: [],
+    datasets: [{
+      label: 'Doanh thu',
+      data: [],
+      backgroundColor: 'rgba(75, 192, 192, 0.5)',
+      borderColor: 'rgba(75, 192, 192, 1)',
+      borderWidth: 1
+    }]
+  });
+
+  const [orderStatusData, setOrderStatusData] = useState({
+    labels: ['Mới', 'Đang chờ', 'Đang chuẩn bị', 'Đang giao', 'Đã giao', 'Đã hủy'],
+    datasets: [{
+      data: [0, 0, 0, 0, 0, 0],
+      backgroundColor: [
+        '#FF6384', // Đỏ nhạt - Mới
+        '#FFCE56', // Vàng - Đang chờ
+        '#36A2EB', // Xanh dương - Đang chuẩn bị
+        '#4BC0C0', // Xanh lá - Đang giao
+        '#2ECC71', // Xanh lá đậm - Đã giao
+        '#95A5A6'  // Xám - Đã hủy
+      ],
+      borderWidth: 0,
+      hoverOffset: 4
+    }]
+  });
 
   const chartOptions = {
     responsive: true,
     plugins: {
       legend: {
-        position: 'top',
+        display: false
       },
       title: {
         display: false
@@ -64,7 +125,10 @@ function Home() {
     },
     scales: {
       y: {
-        beginAtZero: true
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1
+        }
       }
     }
   };
@@ -244,6 +308,189 @@ function Home() {
 
     fetchMonthlyData();
 
+    const calculateRevenueStats = async () => {
+      const now = new Date();
+      const startThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+      const thisMonthQuery = query(
+        collection(db, "Appointments"),
+        where("datetime", ">=", Timestamp.fromDate(startThisMonth)),
+        where("state", "==", "delivered")
+      );
+
+      const lastMonthQuery = query(
+        collection(db, "Appointments"),
+        where("datetime", ">=", Timestamp.fromDate(startLastMonth)),
+        where("datetime", "<=", Timestamp.fromDate(endLastMonth)),
+        where("state", "==", "delivered")
+      );
+
+      const [thisMonthSnapshot, lastMonthSnapshot] = await Promise.all([
+        getDocs(thisMonthQuery),
+        getDocs(lastMonthQuery)
+      ]);
+
+      const thisMonthRevenue = thisMonthSnapshot.docs.reduce((sum, doc) => 
+        sum + (doc.data().totalPrice || 0), 0
+      );
+      const lastMonthRevenue = lastMonthSnapshot.docs.reduce((sum, doc) => 
+        sum + (doc.data().totalPrice || 0), 0
+      );
+
+      const percentChange = lastMonthRevenue === 0 ? 100 :
+        ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+
+      setRevenueStats({
+        lastMonth: lastMonthRevenue,
+        thisMonth: thisMonthRevenue,
+        percentChange
+      });
+    };
+
+    calculateRevenueStats();
+
+    const calculateCategoryStats = async () => {
+      try {
+        // Lấy danh sách các loại (Type)
+        const typeSnapshot = await getDocs(collection(db, "Type"));
+        const types = {};
+        typeSnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.type) {
+            types[data.type] = 0;
+          }
+        });
+
+        // Đếm số lượng dịch vụ theo từng loại
+        const servicesSnapshot = await getDocs(collection(db, "Services"));
+        servicesSnapshot.forEach(doc => {
+          const data = doc.data();
+          const serviceType = data.type || 'Chưa phân loại';
+          if (types.hasOwnProperty(serviceType)) {
+            types[serviceType]++;
+          } else {
+            types['Chưa phân loại'] = (types['Chưa phân loại'] || 0) + 1;
+          }
+        });
+
+        const colors = [
+          '#FF6384',
+          '#36A2EB',
+          '#FFCE56',
+          '#4BC0C0',
+          '#9966FF',
+          '#FF9F40'
+        ];
+
+        setCategoryStats({
+          labels: Object.keys(types),
+          datasets: [{
+            data: Object.values(types),
+            backgroundColor: colors.slice(0, Object.keys(types).length),
+            label: 'Số lượng sản phẩm'
+          }]
+        });
+      } catch (error) {
+        console.error("Error calculating category stats:", error);
+      }
+    };
+
+    calculateCategoryStats();
+
+    const fetchMonthlyRevenue = async () => {
+      try {
+        const last5Months = Array.from({length: 5}, (_, i) => {
+          const date = new Date();
+          date.setMonth(date.getMonth() - i);
+          return date;
+        }).reverse();
+
+        const monthLabels = last5Months.map(date => 
+          date.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })
+        );
+
+        const revenueData = [];
+        const ordersRef = collection(db, "Appointments");
+
+        for (const date of last5Months) {
+          const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+          const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+          
+          const monthQuery = query(
+            ordersRef,
+            where("datetime", ">=", Timestamp.fromDate(startOfMonth)),
+            where("datetime", "<=", Timestamp.fromDate(endOfMonth)),
+            where("state", "==", "delivered")
+          );
+
+          const snapshot = await getDocs(monthQuery);
+          const monthlyRevenue = snapshot.docs.reduce((sum, doc) => 
+            sum + (doc.data().totalPrice || 0), 0
+          );
+          revenueData.push(monthlyRevenue);
+        }
+
+        setMonthlyRevenueData({
+          labels: monthLabels,
+          datasets: [{
+            label: 'Doanh thu',
+            data: revenueData,
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+          }]
+        });
+
+      } catch (error) {
+        console.error("Error fetching monthly revenue:", error);
+      }
+    };
+
+    fetchMonthlyRevenue();
+
+    const fetchOrderStatusData = async () => {
+      try {
+        const ordersRef = collection(db, "Appointments");
+        const ordersSnapshot = await getDocs(ordersRef);
+        
+        const statusCounts = {
+          new: 0,
+          pending: 0,
+          preparing: 0,
+          delivering: 0,
+          delivered: 0,
+          cancelled: 0
+        };
+
+        ordersSnapshot.forEach((doc) => {
+          const status = doc.data().state || 'new';
+          statusCounts[status]++;
+        });
+
+        setOrderStatusData(prev => ({
+          ...prev,
+          datasets: [{
+            ...prev.datasets[0],
+            data: [
+              statusCounts.new,
+              statusCounts.pending,
+              statusCounts.preparing,
+              statusCounts.delivering,
+              statusCounts.delivered,
+              statusCounts.cancelled
+            ]
+          }]
+        }));
+
+      } catch (error) {
+        console.error("Error fetching order status data:", error);
+      }
+    };
+
+    fetchOrderStatusData();
+
     return () => unsubscribe();
   }, [navigate]);
 
@@ -262,6 +509,46 @@ function Home() {
       style: 'currency',
       currency: 'VND'
     }).format(amount);
+  };
+
+  const pieOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 20,
+          usePointStyle: true,
+          pointStyle: 'circle',
+          font: {
+            size: 12
+          }
+        }
+      },
+      title: {
+        display: true,
+        text: 'Phân bố đơn hàng theo trạng thái',
+        font: {
+          size: 16,
+          weight: 'bold'
+        },
+        padding: {
+          top: 10,
+          bottom: 20
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const total = context.dataset.data.reduce((acc, curr) => acc + curr, 0);
+            const percentage = ((value / total) * 100).toFixed(1);
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      }
+    }
   };
 
   return (
@@ -374,17 +661,134 @@ function Home() {
                 <p>Đang tải dữ liệu...</p>
               )}
             </div>
-          </div>
 
-          <div className="dashboard-tables">
-            <div className="recent-orders">
-              <h3>Đơn hàng gần đây</h3>
-              {/* Bảng đơn hàng mới nhất */}
+            <div className="chart-card">
+              <h3>So sánh doanh thu</h3>
+              <Bar
+                data={{
+                  labels: ['Tháng trước', 'Tháng này'],
+                  datasets: [{
+                    label: 'Doanh thu',
+                    data: [revenueStats.lastMonth, revenueStats.thisMonth],
+                    backgroundColor: [
+                      'rgba(54, 162, 235, 0.5)',
+                      'rgba(75, 192, 192, 0.5)'
+                    ],
+                    borderColor: [
+                      'rgba(54, 162, 235, 1)',
+                      'rgba(75, 192, 192, 1)'
+                    ],
+                    borderWidth: 1
+                  }]
+                }}
+                options={{
+                  responsive: true,
+                  plugins: {
+                    legend: {
+                      display: false
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          return formatCurrency(context.raw);
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        callback: function(value) {
+                          return formatCurrency(value);
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
+              <div className={`percent-change ${revenueStats.percentChange >= 0 ? 'positive' : 'negative'}`}>
+                {revenueStats.percentChange >= 0 ? '↑' : '↓'} 
+                {Math.abs(revenueStats.percentChange || 0).toFixed(1)}%
+              </div>
             </div>
-            
-            <div className="recent-users">
-              <h3>Người dùng mới</h3>
-              {/* Bảng người dùng mới đăng ký */}
+
+            <div className="chart-card">
+              <h3>Phân bố sản phẩm theo danh mục</h3>
+              <Pie 
+                data={categoryStats}
+                options={{
+                  responsive: true,
+                  plugins: {
+                    legend: {
+                      position: 'bottom',
+                      labels: {
+                        generateLabels: function(chart) {
+                          const data = chart.data;
+                          if (data.labels.length && data.datasets.length) {
+                            return data.labels.map((label, i) => {
+                              const dataset = data.datasets[0];
+                              const value = dataset.data[i];
+                              return {
+                                text: `${label} (${value})`,
+                                fillStyle: dataset.backgroundColor[i],
+                                hidden: false,
+                                index: i
+                              };
+                            });
+                          }
+                          return [];
+                        }
+                      }
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          const label = context.label || '';
+                          const value = context.raw || 0;
+                          return `${label}: ${value} sản phẩm`;
+                        }
+                      }
+                    }
+                  }
+                }} 
+              />
+            </div>
+
+            <div className="chart-card">
+              <h3>Doanh thu 5 tháng gần nhất</h3>
+              <Bar
+                data={monthlyRevenueData}
+                options={{
+                  responsive: true,
+                  plugins: {
+                    legend: {
+                      display: false
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          return formatCurrency(context.raw);
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        callback: function(value) {
+                          return formatCurrency(value);
+                        }
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            <div className="chart-container">
+              <Pie data={orderStatusData} options={pieOptions} />
             </div>
           </div>
         </main>
