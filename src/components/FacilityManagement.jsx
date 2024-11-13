@@ -7,6 +7,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Icon } from 'leaflet';
+import Sidebar from './Sidebar';
 
 // Fix Leaflet marker icon issue
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -227,48 +228,9 @@ function FacilityManagement() {
       </header>
 
       <div className="admin-content">
-        <nav className="admin-sidebar">
-          <div className="menu-section">
-            <h3>MENU CHÍNH</h3>
-            <ul>
-              <li className="menu-item" onClick={() => navigate('/')}>
-                <i className="fas fa-home"></i>
-                <span>Trang chủ</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/users')}>
-                <i className="fas fa-users"></i>
-                <span>Quản lý người dùng</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/orders')}>
-                <i className="fas fa-calendar"></i>
-                <span>Quản lý đơn hàng</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/categories')}>
-                <i className="fas fa-tags"></i>
-                <span>Quản lý thể loại</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/products')}>
-                <i className="fas fa-box"></i>
-                <span>Quản lý sản phẩm</span>
-              </li>
-              <li className="menu-item active">
-                <i className="fas fa-building"></i>
-                <span>Quản lý cơ sở</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/promotions')}>
-                <i className="fas fa-tags"></i>
-                <span>Quản lý khuyến mãi</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/settings')}>
-                <i className="fas fa-cog"></i>
-                <span>Cài đặt</span>
-              </li>
-            </ul>
-          </div>
-        </nav>
-
+        <Sidebar />
         <main className="main-content">
-          <div className="content-header">
+          <div className="page-title">
             <h2>Quản lý cơ sở</h2>
             <button 
               className="add-facility-button"

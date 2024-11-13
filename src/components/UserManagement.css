@@ -129,24 +129,25 @@ html, body, #root {
 
 /* Style cho nút thêm người dùng */
 .add-user-button {
-  background-color: #4CAF50;
+  background: #28a745;
   color: white;
-  padding: 10px 20px;
+  padding: 12px 24px;
   border: none;
   border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: background-color 0.3s;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 200px;
+  justify-content: center;
 }
 
 .add-user-button:hover {
-  background-color: #45a049;
+  background: #218838;
 }
 
-/* Nếu bạn muốn thêm icon */
 .add-user-button i {
   font-size: 16px;
 }
@@ -316,4 +317,19 @@ html, body, #root {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+
+.page-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 20px;
+}
+
+.page-title h2 {
+  margin: 0;
+  font-size: 32px;
+  color: #333;
+  font-weight: bold;
 }

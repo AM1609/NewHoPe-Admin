@@ -31,20 +31,27 @@
 }
 
 .add-product-button {
-  background-color: #4CAF50;
+  background: #28a745;
   color: white;
-  padding: 10px 20px;
+  padding: 12px 24px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  display: flex;
+  font-size: 15px;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  transition: background-color 0.2s;
+  width: 200px;
+  justify-content: center;
 }
 
 .add-product-button:hover {
-  background-color: #45a049;
+  background: #218838;
+}
+
+.add-product-button i {
+  font-size: 18px;
 }
 
 /* Style cho preview hình ảnh */
@@ -336,4 +343,19 @@
 .products-table td:first-child {
   width: 120px;
   padding: 8px;
+}
+
+.page-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 20px;
+}
+
+.page-title h2 {
+  margin: 0;
+  font-size: 320px;
+  color: #333;
+  font-weight: bold;
 }

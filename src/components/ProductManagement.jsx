@@ -306,7 +306,7 @@ function ProductManagement() {
       <div className="admin-content">
         <Sidebar />
         <main className="main-content">
-          <div className="content-header">
+          <div className="page-title">
             <h2>Quản lý sản phẩm</h2>
             <button 
               className="add-product-button"

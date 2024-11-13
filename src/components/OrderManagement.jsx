@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../../firebase.config';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import Sidebar from './Sidebar';
 import './OrderManagement.css';
 
 function OrderManagement() {
@@ -171,49 +172,10 @@ function OrderManagement() {
       </header>
 
       <div className="admin-content">
-        <nav className="admin-sidebar">
-          <div className="menu-section">
-            <h3>MENU CHÍNH</h3>
-            <ul>
-              <li className="menu-item" onClick={() => navigate('/')}>
-                <i className="fas fa-home"></i>
-                <span>Trang chủ</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/users')}>
-                <i className="fas fa-users"></i>
-                <span>Quản lý người dùng</span>
-              </li>
-              <li className="menu-item active" onClick={() => navigate('/orders')}>
-                <i className="fas fa-shopping-cart"></i>
-                <span>Quản lý đơn hàng</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/categories')}>
-                <i className="fas fa-tags"></i>
-                <span>Quản lý thể loại</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/products')}>
-                <i className="fas fa-box"></i>
-                <span>Quản lý sản phẩm</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/facilities')}>
-                <i className="fas fa-building"></i>
-                <span>Quản lý cơ sở</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/promotions')}>
-                <i className="fas fa-percentage"></i>
-                <span>Quản lý khuyến mãi</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/settings')}>
-                <i className="fas fa-cog"></i>
-                <span>Cài đặt</span>
-              </li>
-            </ul>
-          </div>
-        </nav>
-
+        <Sidebar />
         <main className="main-content">
           <div className="page-title">
-            <h1>Quản lý đơn hàng</h1>
+            <h2>Quản lý đơn hàng</h2>
           </div>
 
           <div className="filters-container">
@@ -250,41 +212,45 @@ function OrderManagement() {
           </div>
 
           <div className="orders-table-container">
-            <table className="orders-table">
-              <thead>
-                <tr>
-                  <th>Mã đơn hàng</th>
-                  <th>Khách hàng</th>
-                  <th>Thời gian</th>
-                  <th>Tổng tiền</th>
-                  <th>Trạng thái</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.map((order) => (
-                  <tr key={order.id}>
-                    <td>{order.id}</td>
-                    <td>{order.fullName}</td>
-                    <td>{formatDate(order.datetime)}</td>
-                    <td>{order.totalPrice?.toLocaleString()} VNĐ</td>
-                    <td>
-                      <span className={getStatusBadgeClass(order.state)}>
-                        {order.state?.toUpperCase()}
-                      </span>
-                    </td>
-                    <td>
-                      <button 
-                        className="edit-button"
-                        onClick={() => handleViewDetails(order)}
-                      >
-                        Chi tiết
-                      </button>
-                    </td>
+            {loading ? (
+              <div className="loading">Loading...</div>
+            ) : (
+              <table className="orders-table">
+                <thead>
+                  <tr>
+                    <th>Mã đơn hàng</th>
+                    <th>Khách hàng</th>
+                    <th>Thời gian</th>
+                    <th>Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredOrders.map((order) => (
+                    <tr key={order.id}>
+                      <td>{order.id}</td>
+                      <td>{order.fullName}</td>
+                      <td>{formatDate(order.datetime)}</td>
+                      <td>{order.totalPrice?.toLocaleString()} VNĐ</td>
+                      <td>
+                        <span className={getStatusBadgeClass(order.state)}>
+                          {order.state?.toUpperCase()}
+                        </span>
+                      </td>
+                      <td>
+                        <button 
+                          className="edit-button"
+                          onClick={() => handleViewDetails(order)}
+                        >
+                          Chi tiết
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </main>
       </div>

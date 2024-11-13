@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../../firebase.config';
 import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { Line, Bar, Pie } from 'react-chartjs-2';
+import Sidebar from './Sidebar';
 import './Home.css';
 import {
   Chart as ChartJS,
@@ -17,7 +18,7 @@ import {
   ArcElement
 } from 'chart.js';
 
-// Đăng ký tất cả các thành phần cần thiết
+// Đăng ký các thành phần chart
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -557,59 +558,17 @@ function Home() {
         <div className="logo">NewHope Admin</div>
         <div className="header-right">
           <span className="admin-name">Admin</span>
-          <button onClick={handleLogout} className="logout-button">
+          <button onClick={() => auth.signOut()} className="logout-button">
             Đăng xuất
           </button>
         </div>
       </header>
 
       <div className="admin-content">
-        <nav className="admin-sidebar">
-          <div className="menu-section">
-            <h3>MENU CHÍNH</h3>
-            <ul>
-              <li className="menu-item active">
-                <i className="fas fa-home"></i>
-                <span>Trang chủ</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/users')}>
-                <i className="fas fa-users"></i>
-                <span>Quản lý người dùng</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/orders')}>
-                <i className="fas fa-calendar"></i>
-                <span>Quản lý đơn hàng</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/categories')}>
-                <i className="fas fa-tags"></i>
-                <span>Quản lý thể loại</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/products')}>
-                <i className="fas fa-box"></i>
-                <span>Quản lý sản phẩm</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/facilities')}>
-                <i className="fas fa-base"></i>
-                <span>Quản lý cơ sở</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/promotions')}>
-                <i className="fas fa-box"></i>
-                <span>Quản lý khuyến mãi</span>
-              </li>
-              <li className="menu-item" onClick={() => navigate('/settings')}>
-                <i className="fas fa-cog"></i>
-                <span>Cài đặt</span>
-              </li>
-            </ul>
-          </div>
-        </nav>
-
+        <Sidebar />
         <main className="main-content">
-          <div className="page-header">
-            <h1>Dashboard</h1>
-            <div className="breadcrumb">
-              Trang chủ / Dashboard
-            </div>
+          <div className="page-title">
+            <h2>Trang chủ</h2>
           </div>
 
           <div className="dashboard-stats">
