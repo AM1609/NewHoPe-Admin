@@ -22,13 +22,18 @@ body, html {
   top: 0;
   left: 0;
   background-color: #f5f5f5;
+  min-height: 100vh;
+  background-image: url('../assets/umamusumeprettyderby_82.gif');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .login-box {
-  background: white;
-  padding: 2.5rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 2rem;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
   width: 90%;
   max-width: 400px;
   position: absolute;

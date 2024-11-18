@@ -114,6 +114,17 @@ function Home() {
     }]
   });
 
+  const [dailyRevenue, setDailyRevenue] = useState({
+    labels: [],
+    datasets: [{
+      label: 'Doanh thu',
+      data: [],
+      backgroundColor: 'rgba(75, 192, 192, 0.5)',
+      borderColor: 'rgba(75, 192, 192, 1)',
+      borderWidth: 1
+    }]
+  });
+
   const chartOptions = {
     responsive: true,
     plugins: {
@@ -133,6 +144,24 @@ function Home() {
       }
     }
   };
+
+  // Thêm loading state chung
+  const [chartsLoading, setChartsLoading] = useState({
+    monthlyOrders: true,
+    topServices: true,
+    monthlyRevenue: true,
+    dailyRevenue: true,
+    categoryStats: true,
+    orderStatus: true
+  });
+
+  // Component Loading chung
+  const LoadingChart = () => (
+    <div className="chart-loading">
+      <div className="loading-spinner"></div>
+      <p>Đang tải dữ liệu...</p>
+    </div>
+  );
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -352,6 +381,15 @@ function Home() {
 
     calculateRevenueStats();
 
+    // Thêm hàm tạo màu ngẫu nhiên
+    const generateColors = (count) => {
+      const hueStep = 360 / count;
+      return Array.from({ length: count }, (_, i) => {
+        const hue = i * hueStep;
+        return `hsl(${hue}, 70%, 65%)`; // Sử dụng HSL để đảm bảo mu khác nhau và dễ nhìn
+      });
+    };
+
     const calculateCategoryStats = async () => {
       try {
         // Lấy danh sách các loại (Type)
@@ -376,20 +414,15 @@ function Home() {
           }
         });
 
-        const colors = [
-          '#FF6384',
-          '#36A2EB',
-          '#FFCE56',
-          '#4BC0C0',
-          '#9966FF',
-          '#FF9F40'
-        ];
+        // Tạo màu dựa trên số lượng danh mục
+        const categoryCount = Object.keys(types).length;
+        const dynamicColors = generateColors(categoryCount);
 
         setCategoryStats({
           labels: Object.keys(types),
           datasets: [{
             data: Object.values(types),
-            backgroundColor: colors.slice(0, Object.keys(types).length),
+            backgroundColor: dynamicColors,
             label: 'Số lượng sản phẩm'
           }]
         });
@@ -402,6 +435,7 @@ function Home() {
 
     const fetchMonthlyRevenue = async () => {
       try {
+        setChartsLoading(prev => ({...prev, monthlyRevenue: true}));
         const last5Months = Array.from({length: 5}, (_, i) => {
           const date = new Date();
           date.setMonth(date.getMonth() - i);
@@ -445,7 +479,9 @@ function Home() {
         });
 
       } catch (error) {
-        console.error("Error fetching monthly revenue:", error);
+        console.error("Lỗi khi lấy doanh thu theo tháng:", error);
+      } finally {
+        setChartsLoading(prev => ({...prev, monthlyRevenue: false}));
       }
     };
 
@@ -491,6 +527,70 @@ function Home() {
     };
 
     fetchOrderStatusData();
+
+    const fetchDailyRevenue = async () => {
+      try {
+        setChartsLoading(prev => ({...prev, dailyRevenue: true}));
+        console.log("Bắt đầu lấy dữ liu doanh thu theo ngày"); // Debug log
+
+        const last30Days = Array.from({length: 30}, (_, i) => {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          date.setHours(0, 0, 0, 0);
+          return date;
+        }).reverse();
+
+        const revenueData = [];
+        const dateLabels = [];
+        const ordersRef = collection(db, "Appointments");
+
+        for (const date of last30Days) {
+          const nextDay = new Date(date);
+          nextDay.setDate(nextDay.getDate() + 1);
+
+          const dayQuery = query(
+            ordersRef,
+            where("datetime", ">=", Timestamp.fromDate(date)),
+            where("datetime", "<", Timestamp.fromDate(nextDay)),
+            where("state", "==", "delivered")
+          );
+
+          const snapshot = await getDocs(dayQuery);
+          const dayRevenue = snapshot.docs.reduce((sum, doc) => {
+            const totalPrice = doc.data().totalPrice || 0;
+            console.log(`Ngày ${date.toLocaleDateString()}: ${totalPrice}`); // Debug log
+            return sum + totalPrice;
+          }, 0);
+
+          revenueData.push(dayRevenue);
+          dateLabels.push(date.toLocaleDateString('vi-VN', { 
+            day: 'numeric',
+            month: 'numeric'
+          }));
+        }
+
+        console.log("Dữ liệu doanh thu:", revenueData); // Debug log
+        console.log("Labels:", dateLabels); // Debug log
+
+        setDailyRevenue({
+          labels: dateLabels,
+          datasets: [{
+            label: 'Doanh thu',
+            data: revenueData,
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+          }]
+        });
+
+      } catch (error) {
+        console.error("Lỗi khi lấy doanh thu theo ngày:", error);
+      } finally {
+        setChartsLoading(prev => ({...prev, dailyRevenue: false}));
+      }
+    };
+
+    fetchDailyRevenue();
 
     return () => unsubscribe();
   }, [navigate]);
@@ -549,6 +649,184 @@ function Home() {
           }
         }
       }
+    }
+  };
+
+  // Cấu hình chung cho cả hai biểu đồ
+  const commonChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return formatCurrency(context.raw);
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          maxRotation: 45,
+          minRotation: 45,
+          autoSkip: true,
+          maxTicksLimit: 10,
+          padding: 10
+        }
+      },
+      y: {
+        beginAtZero: true,
+        suggestedMax: 200000,
+        ticks: {
+          stepSize: 25000,
+          callback: function(value) {
+            return formatCurrency(value);
+          }
+        }
+      }
+    },
+    barThickness: 15,
+    maxBarThickness: 20,
+    layout: {
+      padding: {
+        left: 15,
+        right: 15,
+        top: 15,
+        bottom: 30
+      }
+    }
+  };
+
+  // Cấu hình cho biểu đồ đường (line chart)
+  const lineChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          maxRotation: 45,
+          minRotation: 45,
+          padding: 10
+        }
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+          padding: 10
+        }
+      }
+    },
+    layout: {
+      padding: {
+        left: 10,
+        right: 10,
+        top: 10,
+        bottom: 20
+      }
+    }
+  };
+
+  // Hàm cắt chuỗi và thêm dấu ...
+  const truncateLabel = (str, maxLength = 15) => {
+    if (str.length > maxLength) {
+      return str.substring(0, maxLength) + '...';
+    }
+    return str;
+  };
+
+  // Cấu hình cho biểu đồ cột
+  const barChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            // Sử dụng label trực tiếp từ context
+            return `${context.label}: ${context.formattedValue}`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          maxRotation: 45,
+          minRotation: 45,
+          padding: 10
+        }
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 2,
+          padding: 10
+        }
+      }
+    }
+  };
+
+  // Khi set data cho biểu đồ
+
+  // Khi fetch dữ liệu top services
+  const fetchTopServices = async () => {
+    try {
+      setChartsLoading(prev => ({...prev, topServices: true}));
+      const servicesRef = collection(db, "Services");
+      const servicesSnapshot = await getDocs(servicesRef);
+      
+      const servicesData = servicesSnapshot.docs.map(doc => ({
+        name: doc.data().name,
+        count: doc.data().orderCount || 0
+      }));
+
+      // Sắp xếp theo số lượng đặt hàng
+      servicesData.sort((a, b) => b.count - a.count);
+      
+      // Lấy top 5
+      const top5Services = servicesData.slice(0, 5);
+
+      setTopServicesData({
+        labels: top5Services.map(service => truncateLabel(service.name)), // Labels đã được cắt ngắn
+        datasets: [{
+          label: 'Số lượng đặt hàng',
+          data: top5Services.map(service => service.count),
+          backgroundColor: [
+            'rgba(255, 99, 132, 0.5)',
+            'rgba(54, 162, 235, 0.5)',
+            'rgba(255, 206, 86, 0.5)',
+            'rgba(75, 192, 192, 0.5)',
+            'rgba(153, 102, 255, 0.5)'
+          ],
+          borderWidth: 1
+        }]
+      });
+    } catch (error) {
+      console.error("Lỗi khi lấy top services:", error);
+    } finally {
+      setChartsLoading(prev => ({...prev, topServices: false}));
     }
   };
 
@@ -615,140 +893,94 @@ function Home() {
             <div className="chart-card">
               <h3>Top 5 sản phẩm được đặt nhiều nhất</h3>
               {topServicesData.labels.length > 0 ? (
-                <Bar data={topServicesData} options={chartOptions} />
+                <Bar
+                  data={topServicesData}
+                  options={barChartOptions}
+                  height={250}
+                />
               ) : (
-                <p>Đang tải dữ liệu...</p>
+                <LoadingChart />
               )}
             </div>
 
             <div className="chart-card">
-              <h3>So sánh doanh thu</h3>
-              <Bar
-                data={{
-                  labels: ['Tháng trước', 'Tháng này'],
-                  datasets: [{
-                    label: 'Doanh thu',
-                    data: [revenueStats.lastMonth, revenueStats.thisMonth],
-                    backgroundColor: [
-                      'rgba(54, 162, 235, 0.5)',
-                      'rgba(75, 192, 192, 0.5)'
-                    ],
-                    borderColor: [
-                      'rgba(54, 162, 235, 1)',
-                      'rgba(75, 192, 192, 1)'
-                    ],
-                    borderWidth: 1
-                  }]
-                }}
-                options={{
-                  responsive: true,
-                  plugins: {
-                    legend: {
-                      display: false
-                    },
-                    tooltip: {
-                      callbacks: {
-                        label: function(context) {
-                          return formatCurrency(context.raw);
-                        }
-                      }
-                    }
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      ticks: {
-                        callback: function(value) {
-                          return formatCurrency(value);
-                        }
-                      }
-                    }
-                  }
-                }}
-              />
-              <div className={`percent-change ${revenueStats.percentChange >= 0 ? 'positive' : 'negative'}`}>
-                {revenueStats.percentChange >= 0 ? '↑' : '↓'} 
-                {Math.abs(revenueStats.percentChange || 0).toFixed(1)}%
-              </div>
+              <h3>Doanh thu 5 tháng gần nhất</h3>
+              {monthlyRevenueData.labels.length > 0 ? (
+                <Bar
+                  data={monthlyRevenueData}
+                  options={commonChartOptions}
+                  height={250}
+                />
+              ) : (
+                <LoadingChart />
+              )}
+            </div>
+
+            <div className="chart-card">
+              <h3>Doanh thu 30 ngày gần nhất</h3>
+              {dailyRevenue.labels.length > 0 ? (
+                <Bar
+                  data={dailyRevenue}
+                  options={commonChartOptions}
+                  height={250}
+                />
+              ) : (
+                <LoadingChart />
+              )}
             </div>
 
             <div className="chart-card">
               <h3>Phân bố sản phẩm theo danh mục</h3>
-              <Pie 
-                data={categoryStats}
-                options={{
-                  responsive: true,
-                  plugins: {
-                    legend: {
-                      position: 'bottom',
-                      labels: {
-                        generateLabels: function(chart) {
-                          const data = chart.data;
-                          if (data.labels.length && data.datasets.length) {
-                            return data.labels.map((label, i) => {
-                              const dataset = data.datasets[0];
-                              const value = dataset.data[i];
-                              return {
-                                text: `${label} (${value})`,
-                                fillStyle: dataset.backgroundColor[i],
-                                hidden: false,
-                                index: i
-                              };
-                            });
+              <div style={{ height: '300px' }}>
+                <Pie 
+                  data={categoryStats}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                      legend: {
+                        position: 'right',
+                        labels: {
+                          boxWidth: 15,
+                          padding: 15,
+                          font: {
+                            size: 12
                           }
-                          return [];
-                        }
-                      }
-                    },
-                    tooltip: {
-                      callbacks: {
-                        label: function(context) {
-                          const label = context.label || '';
-                          const value = context.raw || 0;
-                          return `${label}: ${value} sản phẩm`;
                         }
                       }
                     }
-                  }
-                }} 
-              />
+                  }} 
+                />
+              </div>
             </div>
 
             <div className="chart-card">
-              <h3>Doanh thu 5 tháng gần nhất</h3>
-              <Bar
-                data={monthlyRevenueData}
-                options={{
-                  responsive: true,
-                  plugins: {
-                    legend: {
-                      display: false
-                    },
-                    tooltip: {
-                      callbacks: {
-                        label: function(context) {
-                          return formatCurrency(context.raw);
+              <h3>Trạng thái đơn hàng</h3>
+              <div className="pie-container">
+                <Pie 
+                  data={orderStatusData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                      legend: {
+                        position: 'bottom',
+                        labels: {
+                          padding: 20,
+                          usePointStyle: true,
+                          pointStyle: 'circle',
+                          font: {
+                            size: 12
+                          }
                         }
                       }
                     }
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      ticks: {
-                        callback: function(value) {
-                          return formatCurrency(value);
-                        }
-                      }
-                    }
-                  }
-                }}
-              />
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="chart-container">
-              <Pie data={orderStatusData} options={pieOptions} />
-            </div>
+            
           </div>
         </main>
       </div>
