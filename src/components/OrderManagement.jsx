@@ -7,6 +7,24 @@ import './OrderManagement.css';
 
 function OrderManagement() {
   const navigate = useNavigate();
+  const STATE_ORDER = {
+    'new': 1,
+    'pending': 2,
+    'preparing': 3,
+    'delivering': 4,
+    'delivered': 5,
+    'completed': 6,
+    'cancelled': 7
+  };
+
+  const sortOptions = [
+    { value: 'datetime_desc', label: '⌚ Thời gian (Mới nhất)', field: 'datetime', direction: 'desc' },
+    { value: 'datetime_asc', label: '⌚ Thời gian (Cũ nhất)', field: 'datetime', direction: 'asc' },
+    { value: 'totalPrice_desc', label: '💰 Giá trị (Cao nhất)', field: 'totalPrice', direction: 'desc' },
+    { value: 'totalPrice_asc', label: '💰 Giá trị (Thấp nhất)', field: 'totalPrice', direction: 'asc' },
+    { value: 'state', label: '📊 Trạng thái', field: 'state', direction: 'asc' }
+  ];
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -14,6 +32,7 @@ function OrderManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [filteredOrders, setFilteredOrders] = useState([]);
+  const [sortValue, setSortValue] = useState('datetime_desc');
 
   const fetchOrders = async () => {
     try {
@@ -23,8 +42,16 @@ function OrderManagement() {
         id: doc.id,
         ...doc.data()
       }));
-      console.log('Fetched orders:', ordersData);
-      setOrders(ordersData);
+      
+      // Sắp xếp đơn hàng theo thời gian mới nhất
+      const sortedOrders = ordersData.sort((a, b) => {
+        const timeA = a.datetime?.seconds || 0;
+        const timeB = b.datetime?.seconds || 0;
+        return timeB - timeA; // Sắp xếp giảm dần (mới nhất lên đầu)
+      });
+      
+      console.log('Fetched orders:', sortedOrders);
+      setOrders(sortedOrders);
     } catch (error) {
       console.error("Error fetching orders:", error);
     } finally {
@@ -141,6 +168,8 @@ function OrderManagement() {
         return 'status-badge status-new';
       case 'DELIVERED':
         return 'status-badge status-delivered';
+      case 'COMPLETED':
+        return 'status-badge status-delivered';
       case 'PENDING':
         return 'status-badge status-pending';
       case 'CANCELED':
@@ -157,6 +186,43 @@ function OrderManagement() {
 
   const getStatusText = (status) => {
     return status || '';
+  };
+
+  const handleSortChange = (e) => {
+    const selectedValue = e.target.value;
+    setSortValue(selectedValue);
+    
+    const selectedOption = sortOptions.find(opt => opt.value === selectedValue);
+    if (!selectedOption) return;
+
+    setOrders(prevOrders => {
+      const sortedOrders = [...prevOrders].sort((a, b) => {
+        const { field, direction } = selectedOption;
+        
+        switch (field) {
+          case 'datetime':
+            const timeA = a.datetime?.seconds || 0;
+            const timeB = b.datetime?.seconds || 0;
+            return direction === 'desc' ? timeB - timeA : timeA - timeB;
+            
+          case 'totalPrice':
+            const priceA = a.totalPrice || 0;
+            const priceB = b.totalPrice || 0;
+            return direction === 'desc' ? priceB - priceA : priceA - priceB;
+            
+          case 'state':
+            const stateA = (a.state || '').toLowerCase();
+            const stateB = (b.state || '').toLowerCase();
+            const orderA = STATE_ORDER[stateA] || 999;
+            const orderB = STATE_ORDER[stateB] || 999;
+            return orderA - orderB;
+            
+          default:
+            return 0;
+        }
+      });
+      return sortedOrders;
+    });
   };
 
   return (
@@ -195,19 +261,37 @@ function OrderManagement() {
               )}
             </div>
             
-            <div className="status-filter">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">🔄 Tất cả trạng thái</option>
-                <option value="new">🆕 Mới</option>
-                <option value="pending">⏳ Đang chờ</option>
-                <option value="preparing">👨‍🍳 Đang chuẩn bị</option>
-                <option value="delivering">🚚 Đang giao</option>
-                <option value="delivered">✅ Đã giao</option>
-                <option value="cancelled">❌ Đã hủy</option>
-              </select>
+            <div className="filter-actions">
+              <div className="status-filter">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">🔄 Tất cả trạng thái</option>
+                  <option value="new">🆕 Mới</option>
+                  <option value="pending">⏳ Đang chờ</option>
+                  <option value="preparing">👨‍🍳 Đang chuẩn bị</option>
+                  <option value="delivering">🚚 Đang giao</option>
+                  <option value="delivered">✅ Đã giao</option>
+                  <option value="completed">✅ Đã hoàn thành</option>
+                  <option value="cancelled">❌ Đã hủy</option>
+                </select>
+              </div>
+
+              <div className="sort-filter">
+                <select
+                  value={sortValue}
+                  onChange={handleSortChange}
+                  className="sort-select"
+                >
+                  <option value="" disabled>-- Sắp xếp theo --</option>
+                  {sortOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -290,13 +374,13 @@ function OrderManagement() {
                   <select
                     value={selectedOrder.state?.toLowerCase()}
                     onChange={(e) => handleUpdateStatus(selectedOrder.id, e.target.value)}
-
                   >
                     <option value="new">Mới</option>
                     <option value="pending">Đang chờ</option>
                     <option value="preparing">Đang chuẩn bị</option>
                     <option value="delivering">Đang giao</option>
                     <option value="delivered">Đã giao</option>
+                    <option value="completed">Đã hoàn thành</option>
                     <option value="cancelled">Đã hủy</option>
                   </select>
                 </span>

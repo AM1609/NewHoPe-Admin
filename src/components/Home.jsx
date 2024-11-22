@@ -98,7 +98,7 @@ function Home() {
   });
 
   const [orderStatusData, setOrderStatusData] = useState({
-    labels: ['Mới', 'Đang chờ', 'Đang chuẩn bị', 'Đang giao', 'Đã giao', 'Đã hủy'],
+    labels: ['Mới', 'Đang chờ', 'Đang chuẩn bị', 'Đang giao', 'Đã hoàn thành', 'Đã hủy'],
     datasets: [{
       data: [0, 0, 0, 0, 0, 0],
       backgroundColor: [
@@ -106,7 +106,7 @@ function Home() {
         '#FFCE56', // Vàng - Đang chờ
         '#36A2EB', // Xanh dương - Đang chuẩn bị
         '#4BC0C0', // Xanh lá - Đang giao
-        '#2ECC71', // Xanh lá đậm - Đã giao
+        '#2ECC71', // Xanh lá đậm - Đã hoàn thành
         '#95A5A6'  // Xám - Đã hủy
       ],
       borderWidth: 0,
@@ -207,7 +207,7 @@ function Home() {
         const monthlyOrdersQuery = query(
           ordersRef,
           where("datetime", ">=", startOfMonthTimestamp),
-          where("state", "==", "delivered")
+          where("state", "in", ["delivered", "completed"])
         );
         
         const monthlyOrdersSnapshot = await getDocs(monthlyOrdersQuery);
@@ -347,14 +347,14 @@ function Home() {
       const thisMonthQuery = query(
         collection(db, "Appointments"),
         where("datetime", ">=", Timestamp.fromDate(startThisMonth)),
-        where("state", "==", "delivered")
+        where("state", "in", ["delivered", "completed"])
       );
 
       const lastMonthQuery = query(
         collection(db, "Appointments"),
         where("datetime", ">=", Timestamp.fromDate(startLastMonth)),
         where("datetime", "<=", Timestamp.fromDate(endLastMonth)),
-        where("state", "==", "delivered")
+        where("state", "in", ["delivered", "completed"])
       );
 
       const [thisMonthSnapshot, lastMonthSnapshot] = await Promise.all([
@@ -457,7 +457,7 @@ function Home() {
             ordersRef,
             where("datetime", ">=", Timestamp.fromDate(startOfMonth)),
             where("datetime", "<=", Timestamp.fromDate(endOfMonth)),
-            where("state", "==", "delivered")
+            where("state", "in", ["delivered", "completed"])
           );
 
           const snapshot = await getDocs(monthQuery);
@@ -497,13 +497,17 @@ function Home() {
           pending: 0,
           preparing: 0,
           delivering: 0,
-          delivered: 0,
+          completed: 0,
           cancelled: 0
         };
 
         ordersSnapshot.forEach((doc) => {
           const status = doc.data().state || 'new';
-          statusCounts[status]++;
+          if (status === 'delivered' || status === 'completed') {
+            statusCounts.completed++;
+          } else {
+            statusCounts[status]++;
+          }
         });
 
         setOrderStatusData(prev => ({
@@ -515,7 +519,7 @@ function Home() {
               statusCounts.pending,
               statusCounts.preparing,
               statusCounts.delivering,
-              statusCounts.delivered,
+              statusCounts.completed,
               statusCounts.cancelled
             ]
           }]
@@ -552,7 +556,7 @@ function Home() {
             ordersRef,
             where("datetime", ">=", Timestamp.fromDate(date)),
             where("datetime", "<", Timestamp.fromDate(nextDay)),
-            where("state", "==", "delivered")
+            where("state", "in", ["delivered", "completed"])
           );
 
           const snapshot = await getDocs(dayQuery);
@@ -604,11 +608,12 @@ function Home() {
     }
   };
 
-  // Hàm format số tiền
+  // Sửa lại hàm formatCurrency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
-      currency: 'VND'
+      currency: 'VND',
+      maximumFractionDigits: 0 // Không hiển thị số thập phân
     }).format(amount);
   };
 
