@@ -17,6 +17,14 @@ import {
   Legend,
   ArcElement
 } from 'chart.js';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import { registerLocale, setDefaultLocale } from "react-datepicker";
+import vi from 'date-fns/locale/vi';
+
+// Đăng ký locale tiếng Việt
+registerLocale('vi', vi);
+setDefaultLocale('vi');
 
 // Đăng ký các thành phần chart
 ChartJS.register(
@@ -162,6 +170,105 @@ function Home() {
       <p>Đang tải dữ liệu...</p>
     </div>
   );
+
+  // Sửa lại state ban đầu
+  const [dateRange, setDateRange] = useState({
+    startDate: null,
+    endDate: null
+  });
+
+  // Thêm state để kiểm soát việc load dữ liệu
+  const [shouldFetchData, setShouldFetchData] = useState(false);
+
+  // Sửa lại hàm handleDateChange
+  const handleDateChange = (type, date) => {
+    setDateRange(prev => ({
+      ...prev,
+      [type]: date
+    }));
+    setShouldFetchData(false); // Reset trạng thái load khi có thay đổi ngày
+  };
+
+  // Hàm xử lý khi click nút Xem
+  const handleViewData = () => {
+    if (dateRange.startDate && dateRange.endDate) {
+      setShouldFetchData(true);
+      fetchDailyRevenue(dateRange.startDate, dateRange.endDate);
+    } else {
+      alert('Vui lòng chọn đầy đủ ngày bắt đầu và kết thúc');
+    }
+  };
+
+  // Sửa lại hàm fetchDailyRevenue để nhận tham số ngày
+  const fetchDailyRevenue = async (start = dateRange.startDate, end = dateRange.endDate) => {
+    try {
+      setChartsLoading(prev => ({...prev, dailyRevenue: true}));
+      
+      // Đặt giờ bắt đầu và kết thúc
+      const startDate = new Date(start);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(end);
+      endDate.setHours(23, 59, 59, 999);
+
+      // Query một lần duy nhất cho toàn bộ khoảng thời gian
+      const ordersRef = collection(db, "Appointments");
+      const timeQuery = query(
+        ordersRef,
+        where("datetime", ">=", Timestamp.fromDate(startDate)),
+        where("datetime", "<=", Timestamp.fromDate(endDate)),
+        where("state", "in", ["delivered", "completed"])
+      );
+
+      const snapshot = await getDocs(timeQuery);
+      
+      // Tạo map để nhóm doanh thu theo ngày
+      const revenueByDate = new Map();
+      
+      // Tạo mảng các ngày trong khoảng
+      const dates = [];
+      let currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toLocaleDateString('vi-VN', {
+          day: 'numeric',
+          month: 'numeric'
+        });
+        revenueByDate.set(dateStr, 0);
+        dates.push(dateStr);
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Tính tổng doanh thu cho mỗi ngày
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const orderDate = data.datetime.toDate().toLocaleDateString('vi-VN', {
+          day: 'numeric',
+          month: 'numeric'
+        });
+        const currentRevenue = revenueByDate.get(orderDate) || 0;
+        revenueByDate.set(orderDate, currentRevenue + (data.totalPrice || 0));
+      });
+
+      // Chuyển đổi dữ liệu cho biểu đồ
+      const revenueData = dates.map(date => revenueByDate.get(date) || 0);
+
+      setDailyRevenue({
+        labels: dates,
+        datasets: [{
+          label: 'Doanh thu',
+          data: revenueData,
+          backgroundColor: 'rgba(75, 192, 192, 0.5)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }]
+      });
+
+    } catch (error) {
+      console.error("Lỗi khi lấy doanh thu theo ngày:", error);
+    } finally {
+      setChartsLoading(prev => ({...prev, dailyRevenue: false}));
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -532,70 +639,6 @@ function Home() {
 
     fetchOrderStatusData();
 
-    const fetchDailyRevenue = async () => {
-      try {
-        setChartsLoading(prev => ({...prev, dailyRevenue: true}));
-        console.log("Bắt đầu lấy dữ liu doanh thu theo ngày"); // Debug log
-
-        const last30Days = Array.from({length: 30}, (_, i) => {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          date.setHours(0, 0, 0, 0);
-          return date;
-        }).reverse();
-
-        const revenueData = [];
-        const dateLabels = [];
-        const ordersRef = collection(db, "Appointments");
-
-        for (const date of last30Days) {
-          const nextDay = new Date(date);
-          nextDay.setDate(nextDay.getDate() + 1);
-
-          const dayQuery = query(
-            ordersRef,
-            where("datetime", ">=", Timestamp.fromDate(date)),
-            where("datetime", "<", Timestamp.fromDate(nextDay)),
-            where("state", "in", ["delivered", "completed"])
-          );
-
-          const snapshot = await getDocs(dayQuery);
-          const dayRevenue = snapshot.docs.reduce((sum, doc) => {
-            const totalPrice = doc.data().totalPrice || 0;
-            console.log(`Ngày ${date.toLocaleDateString()}: ${totalPrice}`); // Debug log
-            return sum + totalPrice;
-          }, 0);
-
-          revenueData.push(dayRevenue);
-          dateLabels.push(date.toLocaleDateString('vi-VN', { 
-            day: 'numeric',
-            month: 'numeric'
-          }));
-        }
-
-        console.log("Dữ liệu doanh thu:", revenueData); // Debug log
-        console.log("Labels:", dateLabels); // Debug log
-
-        setDailyRevenue({
-          labels: dateLabels,
-          datasets: [{
-            label: 'Doanh thu',
-            data: revenueData,
-            backgroundColor: 'rgba(75, 192, 192, 0.5)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1
-          }]
-        });
-
-      } catch (error) {
-        console.error("Lỗi khi lấy doanh thu theo ngày:", error);
-      } finally {
-        setChartsLoading(prev => ({...prev, dailyRevenue: false}));
-      }
-    };
-
-    fetchDailyRevenue();
-
     return () => unsubscribe();
   }, [navigate]);
 
@@ -657,7 +700,7 @@ function Home() {
     }
   };
 
-  // Cấu hình chung cho cả hai biểu đồ
+  // Điều chỉnh commonChartOptions
   const commonChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -681,8 +724,10 @@ function Home() {
         ticks: {
           maxRotation: 45,
           minRotation: 45,
-          autoSkip: true,
-          maxTicksLimit: 10,
+          autoSkip: false,
+          font: {
+            size: 11
+          },
           padding: 10
         }
       },
@@ -697,8 +742,6 @@ function Home() {
         }
       }
     },
-    barThickness: 15,
-    maxBarThickness: 20,
     layout: {
       padding: {
         left: 15,
@@ -835,6 +878,21 @@ function Home() {
     }
   };
 
+  // Thêm hàm format date
+  const formatDateForInput = (date) => {
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // Hàm parse date từ format DD/MM/YYYY
+  const parseDateFromFormat = (dateString) => {
+    const [day, month, year] = dateString.split('/');
+    return new Date(year, month - 1, day);
+  };
+
   return (
     <div className="admin-container">
       <header className="admin-header">
@@ -910,28 +968,68 @@ function Home() {
 
             <div className="chart-card">
               <h3>Doanh thu 5 tháng gần nhất</h3>
-              {monthlyRevenueData.labels.length > 0 ? (
-                <Bar
-                  data={monthlyRevenueData}
-                  options={commonChartOptions}
-                  height={250}
-                />
-              ) : (
-                <LoadingChart />
-              )}
+              <div style={{ height: '300px' }}>
+                {monthlyRevenueData.labels.length > 0 ? (
+                  <Bar
+                    data={monthlyRevenueData}
+                    options={commonChartOptions}
+                  />
+                ) : (
+                  <LoadingChart />
+                )}
+              </div>
             </div>
 
             <div className="chart-card">
-              <h3>Doanh thu 30 ngày gần nhất</h3>
-              {dailyRevenue.labels.length > 0 ? (
-                <Bar
-                  data={dailyRevenue}
-                  options={commonChartOptions}
-                  height={250}
-                />
-              ) : (
-                <LoadingChart />
-              )}
+              <h3>Doanh thu theo ngày</h3>
+              <div className="date-range-picker">
+                <div className="date-input">
+                  <label>Từ ngày:</label>
+                  <DatePicker
+                    selected={dateRange.startDate}
+                    onChange={date => handleDateChange('startDate', date)}
+                    dateFormat="dd/MM/yyyy"
+                    maxDate={dateRange.endDate || new Date()}
+                    locale="vi"
+                    className="date-picker-input"
+                    placeholderText="Chọn ngày bắt đầu"
+                  />
+                </div>
+                <div className="date-input">
+                  <label>Đến ngày:</label>
+                  <DatePicker
+                    selected={dateRange.endDate}
+                    onChange={date => handleDateChange('endDate', date)}
+                    dateFormat="dd/MM/yyyy"
+                    minDate={dateRange.startDate}
+                    maxDate={new Date()}
+                    locale="vi"
+                    className="date-picker-input"
+                    placeholderText="Chọn ngày kết thúc"
+                  />
+                </div>
+                <button 
+                  className="view-data-button"
+                  onClick={handleViewData}
+                  disabled={!dateRange.startDate || !dateRange.endDate}
+                >
+                  Xem
+                </button>
+              </div>
+              <div className="chart-inner-container">
+                {(!dateRange.startDate || !dateRange.endDate) ? (
+                  <div className="no-data-message">Hãy chọn ngày</div>
+                ) : dailyRevenue.labels.length > 0 ? (
+                  <Bar
+                    data={dailyRevenue}
+                    options={commonChartOptions}
+                    className="chart-container"
+                    height={250}
+                  />
+                ) : (
+                  <div className="no-data-message">Bấm nút Xem để xem dữ liệu</div>
+                )}
+              </div>
             </div>
 
             <div className="chart-card">

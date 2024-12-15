@@ -106,6 +106,13 @@ function OrderManagement() {
         throw new Error('Order ID is required');
       }
 
+      // Kiểm tra nếu đơn hàng đã bị hủy
+      const currentOrder = orders.find(order => order.id === orderId);
+      if (currentOrder?.state?.toLowerCase() === 'cancelled') {
+        alert('Không thể thay đổi trạng thái của đơn hàng đã hủy!');
+        return;
+      }
+
       console.log('Updating order with ID:', orderId);
       console.log('New status:', newStatus);
 
@@ -374,6 +381,7 @@ function OrderManagement() {
                   <select
                     value={selectedOrder.state?.toLowerCase()}
                     onChange={(e) => handleUpdateStatus(selectedOrder.id, e.target.value)}
+                    disabled={selectedOrder.state?.toLowerCase() === 'cancelled'}
                   >
                     <option value="new">Mới</option>
                     <option value="pending">Đang chờ</option>
